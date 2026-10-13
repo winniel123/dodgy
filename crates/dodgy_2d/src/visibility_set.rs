@@ -1,4 +1,4 @@
-use std::{collections::HashSet, f32::consts::PI, mem::swap};
+use std::{collections::BTreeSet, f32::consts::PI, mem::swap};
 
 use glam::Vec2;
 
@@ -252,7 +252,7 @@ impl VisibilitySet {
     }
   }
 
-  pub fn get_visible_line_ids(&self) -> HashSet<u32> {
+  pub fn get_visible_line_ids(&self) -> BTreeSet<u32> {
     self.cones.iter().map(|cone| cone.line_id).collect()
   }
 }

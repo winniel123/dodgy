@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::{borrow::Cow, collections::BTreeMap};
 
 use glam::Vec2;
 
@@ -79,7 +79,7 @@ impl Simulator {
   }
 
   pub fn step(&mut self, time_step: f32) {
-    let mut agent_pair_to_distance_squared = HashMap::new();
+    let mut agent_pair_to_distance_squared = BTreeMap::new();
     // TODO: Make this fast.
     for i in 0..self.agents.len() {
       for j in (i + 1)..self.agents.len() {
@@ -126,6 +126,7 @@ impl Simulator {
           },
           time_horizon: parameters.time_horizon,
           obstacle_time_horizon: parameters.obstacle_time_horizon,
+          tiebreak_seed: index as u64,
         },
       ));
     }

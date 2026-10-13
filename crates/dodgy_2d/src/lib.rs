@@ -72,6 +72,12 @@ pub struct AvoidanceOptions {
   pub time_horizon: f32,
   /// How long in the future should collisions be considered for obstacles.
   pub obstacle_time_horizon: f32,
+  /// Picks the direction to move in when the agent is exactly on top of a
+  /// neighbour with exactly the same velocity, where any direction is as good
+  /// as another. The same seed and neighbours always pick the same direction,
+  /// so the result is deterministic. Give each agent its own seed: two agents
+  /// with the same seed pick the same direction and don't separate.
+  pub tiebreak_seed: u64,
 }
 
 impl Agent {
@@ -150,11 +156,12 @@ impl Agent {
           avoidance_options.obstacle_time_horizon,
         )
       })
-      .chain(neighbours.iter().map(|neighbour| {
+      .chain(neighbours.iter().enumerate().map(|(index, neighbour)| {
         self.get_line_for_neighbour(
           neighbour,
           avoidance_options.time_horizon,
           time_step,
+          (avoidance_options.tiebreak_seed, index),
         )
       }))
       .collect::<Vec<Line>>();
@@ -193,11 +200,12 @@ impl Agent {
           avoidance_options.obstacle_time_horizon,
         )
       })
-      .chain(neighbours.iter().map(|neighbour| {
+      .chain(neighbours.iter().enumerate().map(|(index, neighbour)| {
         self.get_line_for_neighbour(
           neighbour,
           avoidance_options.time_horizon,
           time_step,
+          (avoidance_options.tiebreak_seed, index),
         )
       }))
       .collect::<Vec<Line>>();
@@ -236,6 +244,7 @@ impl Agent {
     neighbour: &Agent,
     time_horizon: f32,
     time_step: f32,
+    (tiebreak_seed, neighbour_index): (u64, usize),
   ) -> Line {
     // There are two parts to the velocity obstacle induced by `neighbour`.
     // 1) The cut-off circle. This is where the agent collides with `neighbour`
@@ -361,15 +370,15 @@ impl Agent {
       vo_normal = {
         let velocity_from_circle_center =
           relative_agent_velocity - cutoff_circle_center;
-        // If the vector has a length of zero, pick a random direction. Fork the
-        // implementation of `normalize_or` so we only compute random
-        // values if necessary (which should be very rare).
+        // If the vector has a length of zero, any direction is as good as
+        // another, so pick one from the seed. Fork the implementation of
+        // `normalize_or` so we only compute it if necessary (which should be
+        // very rare).
         let recip = velocity_from_circle_center.length_recip();
         if recip.is_finite() && recip > 0.0 {
           velocity_from_circle_center * recip
         } else {
-          let angle: f32 = rand::random();
-          Vec2::new(angle.cos(), angle.sin())
+          tiebreak_direction(tiebreak_seed, neighbour_index)
         }
       };
       // Get the point on the cut-off circle in that direction (which is the
@@ -402,6 +411,22 @@ impl Agent {
 type AvoidingVelocityReturn = (Vec2, debug::DebugData);
 #[cfg(not(feature = "debug"))]
 type AvoidingVelocityReturn = Vec2;
+
+/// A unit vector picked by `seed` for the neighbour at `neighbour_index`: the
+/// same arguments always give the same direction, and different neighbours of
+/// one agent get unrelated ones.
+fn tiebreak_direction(seed: u64, neighbour_index: usize) -> Vec2 {
+  // SplitMix64, to spread nearby seeds and indices over the whole circle.
+  let mut z = seed
+    .wrapping_add((neighbour_index as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15))
+    .wrapping_add(0x9E37_79B9_7F4A_7C15);
+  z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+  z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+  z ^= z >> 31;
+  // The top 24 bits, as a fraction of a turn.
+  let turns = (z >> 40) as f32 / (1u64 << 24) as f32;
+  Vec2::from_angle(turns * std::f32::consts::TAU)
+}
 
 #[cfg(test)]
 #[path = "lib_test.rs"]

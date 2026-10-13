@@ -98,6 +98,8 @@ for i in 0..100 {
         obstacle_margin: 0.1,
         time_horizon,
         obstacle_time_horizon,
+        // Each agent gets its own seed.
+        tiebreak_seed: i as u64,
       });
     new_velocities.push(avoidance_velocity);
   }

@@ -45,7 +45,10 @@ mod get_line_for_neighbour_tests {
     };
 
     let actual_line = agent.get_line_for_neighbour(
-      &neighbour, /* time_horizon= */ 1.0, /* time_step= */ 1.0,
+      &neighbour,
+      /* time_horizon= */ 1.0,
+      /* time_step= */ 1.0,
+      /* tiebreak= */ (0, 0),
     );
     // The agent's velocity projects directly onto the cut-off circle.
     assert_line_eq!(
@@ -74,7 +77,10 @@ mod get_line_for_neighbour_tests {
     };
 
     let inside_shadow_line = agent.get_line_for_neighbour(
-      &neighbour, /* time_horizon= */ 1.0, /* time_step= */ 1.0,
+      &neighbour,
+      /* time_horizon= */ 1.0,
+      /* time_step= */ 1.0,
+      /* tiebreak= */ (0, 0),
     );
     assert_line_eq!(
       inside_shadow_line,
@@ -84,7 +90,10 @@ mod get_line_for_neighbour_tests {
     agent.velocity = Vec2::new(10.0, -1.0);
 
     let outside_shadow_line = agent.get_line_for_neighbour(
-      &neighbour, /* time_horizon= */ 1.0, /* time_step= */ 1.0,
+      &neighbour,
+      /* time_horizon= */ 1.0,
+      /* time_step= */ 1.0,
+      /* tiebreak= */ (0, 0),
     );
     assert_line_eq!(
       outside_shadow_line,
@@ -109,7 +118,10 @@ mod get_line_for_neighbour_tests {
     };
 
     let collision_line = agent.get_line_for_neighbour(
-      &neighbour, /* time_horizon= */ 1.0, /* time_step= */ 0.5,
+      &neighbour,
+      /* time_horizon= */ 1.0,
+      /* time_step= */ 0.5,
+      /* tiebreak= */ (0, 0),
     );
     assert_line_eq!(
       collision_line,
@@ -137,7 +149,10 @@ mod get_line_for_neighbour_tests {
     };
 
     let collision_line = agent.get_line_for_neighbour(
-      &neighbour, /* time_horizon= */ 2.0, /* time_step= */ 0.5,
+      &neighbour,
+      /* time_horizon= */ 2.0,
+      /* time_step= */ 0.5,
+      /* tiebreak= */ (0, 0),
     );
     assert_line_eq!(
       collision_line,
@@ -165,7 +180,10 @@ mod get_line_for_neighbour_tests {
     };
 
     let actual_line = agent.get_line_for_neighbour(
-      &neighbour, /* time_horizon= */ 2.0, /* time_step= */ 0.5,
+      &neighbour,
+      /* time_horizon= */ 2.0,
+      /* time_step= */ 0.5,
+      /* tiebreak= */ (0, 0),
     );
     assert_line_eq!(
       actual_line,
@@ -190,7 +208,10 @@ mod get_line_for_neighbour_tests {
     };
 
     let actual_line = agent.get_line_for_neighbour(
-      &neighbour, /* time_horizon= */ 2.0, /* time_step= */ 0.5,
+      &neighbour,
+      /* time_horizon= */ 2.0,
+      /* time_step= */ 0.5,
+      /* tiebreak= */ (0, 0),
     );
     assert_line_eq!(
       actual_line,
@@ -241,6 +262,7 @@ mod compute_avoiding_velocity_tests {
       &AvoidanceOptions {
         obstacle_margin: 0.0,
         obstacle_time_horizon: 1.0,
+        tiebreak_seed: 0,
         time_horizon: 1.0,
       },
     );
@@ -264,13 +286,42 @@ mod compute_avoiding_velocity_tests {
       &AvoidanceOptions {
         obstacle_margin: 0.0,
         obstacle_time_horizon: 1.0,
+        tiebreak_seed: 0,
         time_horizon: 1.0,
       },
     );
 
-    // Agents will move in a random direction if they are perfectly on top of
-    // one another.
+    // Agents will move in a direction picked by the seed if they are perfectly
+    // on top of one another.
     assert_ne!(avoiding_velocity, Vec2::ZERO);
+  }
+
+  #[test]
+  fn the_seed_picks_the_way_apart_deterministically() {
+    let agent = Agent {
+      position: Vec2::ZERO,
+      velocity: Vec2::ZERO,
+      radius: 0.5,
+      avoidance_responsibility: 1.0,
+    };
+    let avoid = |tiebreak_seed| {
+      agent.compute_avoiding_velocity(
+        &[Cow::Owned(agent.clone())],
+        &[],
+        /* preferred_velocity= */ Vec2::ZERO,
+        /* max_speed= */ 2.0,
+        /* time_step= */ 0.01,
+        &AvoidanceOptions {
+          obstacle_margin: 0.0,
+          obstacle_time_horizon: 1.0,
+          time_horizon: 1.0,
+          tiebreak_seed,
+        },
+      )
+    };
+
+    assert_eq!(avoid(7), avoid(7));
+    assert_ne!(avoid(7), avoid(8));
   }
 
   #[test]
@@ -311,6 +362,7 @@ mod compute_avoiding_velocity_tests {
         obstacle_margin: 0.0,
         time_horizon: 1.0,
         obstacle_time_horizon: 1.0,
+        tiebreak_seed: 0,
       },
     );
 
