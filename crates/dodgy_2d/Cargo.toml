@@ -15,6 +15,9 @@ keywords = ["orca", "rvo", "collision", "avoidance", "navigation"]
 
 [dependencies]
 glam = "0.29.1"
+# The trig goes through one implementation on every machine, not the platform's C runtime,
+# which on Windows picks its algorithm by CPU.
+libm = "0.2"
 
 [features]
 # Allows access to some of the internal data used to generate the final suggested velocity.

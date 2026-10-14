@@ -344,8 +344,8 @@ impl Cone {
       relative_angle
     };
 
-    self.left_ray.distance * self.related_angle.sin()
-      / (relative_angle + self.related_angle).sin()
+    self.left_ray.distance * libm::sinf(self.related_angle)
+      / libm::sinf(relative_angle + self.related_angle)
   }
 
   fn ray_at_angle(&self, angle: f32) -> ConeRay {
@@ -392,7 +392,7 @@ struct ConeRay {
 
 impl ConeRay {
   fn from_point(point: Vec2) -> ConeRay {
-    let angle = point.y.atan2(point.x);
+    let angle = libm::atan2f(point.y, point.x);
     ConeRay {
       angle: if angle >= 0.0 { angle } else { 2.0 * PI + angle },
       distance: point.length(),
